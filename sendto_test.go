@@ -10,10 +10,10 @@ import (
 func TestFileServer(t *testing.T) {
 	var (
 		testFile = fileToServe{"/helloworld", "helloworld.txt", []byte("Hello, World!")}
-		server   = NewFileServer()
 	)
 
 	t.Run("all requests should be 404'd if no endpoints have been registered", func(t *testing.T) {
+		server := NewFileServer()
 		request := httptest.NewRequest(http.MethodGet, testFile.url, nil)
 		responseRecorder := httptest.NewRecorder()
 
@@ -24,22 +24,33 @@ func TestFileServer(t *testing.T) {
 	})
 
 	t.Run("registering an endpoint with content", func(t *testing.T) {
+		server := NewFileServer()
 		server.RegisterEndpoint(testFile.url, testFile.filename, testFile.content)
 
 		request := httptest.NewRequest(http.MethodGet, testFile.url, nil)
 		responseRecorder := httptest.NewRecorder()
 
 		server.FileDownloadHandler(responseRecorder, request)
-
 		resp := responseRecorder.Result()
-		AssertStatusOK(t, resp)
-		AssertFilenameEqual(t, resp, testFile.filename)
+		AssertFileServed(t, testFile, resp, responseRecorder.Body.String())
+	})
 
-		got := responseRecorder.Body.String()
-		want := string(testFile.content)
-		if got != want {
-			t.Errorf("expected body %s, got %s", want, got)
-		}
+	t.Run("deleting an endpoint", func(t *testing.T) {
+		server := NewFileServer()
+		server.RegisterEndpoint(testFile.url, testFile.filename, testFile.content)
+
+		request := httptest.NewRequest(http.MethodGet, testFile.url, nil)
+		responseRecorder := httptest.NewRecorder()
+
+		server.FileDownloadHandler(responseRecorder, request)
+		resp := responseRecorder.Result()
+		AssertFileServed(t, testFile, resp, responseRecorder.Body.String())
+
+		server.DeleteEndpoint(testFile.url)
+		responseRecorder = httptest.NewRecorder()
+		server.FileDownloadHandler(responseRecorder, request)
+		resp = responseRecorder.Result()
+		AssertStatus404(t, resp)
 	})
 
 }
@@ -47,6 +58,17 @@ func TestFileServer(t *testing.T) {
 type fileToServe struct {
 	url, filename string
 	content       []byte
+}
+
+func AssertFileServed(t *testing.T, file fileToServe, resp *http.Response, body string) {
+	AssertStatusOK(t, resp)
+	AssertFilenameEqual(t, resp, file.filename)
+
+	want := string(file.content)
+	if body != want {
+		t.Errorf("expected body %s, got %s", want, body)
+	}
+
 }
 
 func AssertStatusOK(t *testing.T, resp *http.Response) {

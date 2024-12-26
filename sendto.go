@@ -58,5 +58,7 @@ func (s *FileServer) FileDownloadHandler(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Disposition", "attachment; filename="+ep.filename)
 	w.WriteHeader(http.StatusOK)
-	w.Write(ep.content)
+	if _, err := w.Write(ep.content); err != nil {
+		return
+	}
 }
