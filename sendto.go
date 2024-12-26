@@ -2,9 +2,43 @@ package sendto
 
 import (
 	"log"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 )
+
+// client parts
+
+func GetLocalIP() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if !ok {
+			continue
+		}
+
+		ip := ipNet.IP.String()
+
+		if ipNet.IP.To4() != nil && strings.HasPrefix(ip, "192.168") {
+			return ip, nil
+		}
+	}
+
+	return "", nil
+}
+
+// The IP must be a local ip in the format of '192.168.xx.xxx'. The port must be in the format of :xxxx.
+// The path must be in the format of /file/xxx.
+func ComposeURL(ip, port, path string) string {
+	return ip + port + path
+}
+
+// the file hosting server
 
 type FileServer struct {
 	mu        sync.RWMutex
@@ -35,21 +69,27 @@ func (s *FileServer) StartServer(port string) {
 	}
 }
 
-func (s *FileServer) RegisterEndpoint(url, filepath string, content []byte) {
+func (s *FileServer) RegisterEndpoint(url, filename string, content []byte) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.endpoints[url] = endpoint{url, filepath, content}
+
+	if !strings.HasPrefix(url, "/") {
+		url = "/" + url
+	}
+	s.endpoints[url] = endpoint{url, filename, content}
 }
 
 func (s *FileServer) DeleteEndpoint(url string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	delete(s.endpoints, url)
 }
 
 func (s *FileServer) FileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	ep, ok := s.endpoints[r.URL.Path]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)

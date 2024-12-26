@@ -7,6 +7,18 @@ import (
 	"testing"
 )
 
+// func TestGetLocalIP(t *testing.T) {
+// 	want := "" // local ip would go here
+// 	got, err := GetLocalIP()
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+
+// 	if got != want {
+// 		t.Errorf("got %v, and %v", got, want)
+// 	}
+// }
+
 func TestFileServer(t *testing.T) {
 	var (
 		testFile = fileToServe{"/helloworld", "helloworld.txt", []byte("Hello, World!")}
@@ -52,7 +64,6 @@ func TestFileServer(t *testing.T) {
 		resp = responseRecorder.Result()
 		AssertStatus404(t, resp)
 	})
-
 }
 
 type fileToServe struct {
