@@ -59,6 +59,7 @@ func TestFileServer(t *testing.T) {
 		AssertFileServed(t, testFile, resp, responseRecorder.Body.String())
 
 		server.DeleteEndpoint(testFile.url)
+
 		responseRecorder = httptest.NewRecorder()
 		server.FileDownloadHandler(responseRecorder, request)
 		resp = responseRecorder.Result()
@@ -72,6 +73,7 @@ type fileToServe struct {
 }
 
 func AssertFileServed(t *testing.T, file fileToServe, resp *http.Response, body string) {
+	t.Helper()
 	AssertStatusOK(t, resp)
 	AssertFilenameEqual(t, resp, file.filename)
 
