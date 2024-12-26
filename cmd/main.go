@@ -26,11 +26,28 @@ func main() {
 		} else {
 			fmt.Println(filename)
 			if path.Ext(filename) == "" {
-				fmt.Println("must provide extension")
-				return
+				fmt.Println("no extension provided")
+				//return
 			}
-			//TODO stdin input
-			return
+			data, err := io.ReadAll(os.Stdin)
+			if err != nil {
+				panic(err)
+			}
+			server := sendto.NewFileServer()
+
+			url := strings.TrimSuffix(os.Args[2], path.Ext(os.Args[2]))
+
+			server.RegisterEndpoint(url, os.Args[2], data)
+
+			ip, _ := sendto.GetLocalIP()
+			fmt.Printf("serving at %s:%s/%s\n", ip, "8000", url)
+
+			go server.StartServer(":8000")
+			fmt.Printf("type sendto client %s %s %s on your client\n", strings.TrimPrefix(ip, "192.168."), "8000", url)
+			fmt.Println("press ctrl+c to quit")
+			select {}
+			//_, _ = fmt.Scanln("\n") // doesnt work for stdin
+			// return
 		}
 	}
 
