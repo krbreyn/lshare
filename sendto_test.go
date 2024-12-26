@@ -4,39 +4,49 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
-	"strings"
 	"testing"
 )
 
 func TestFileServer(t *testing.T) {
 	var (
-		testFile = fileToServe{"helloworld.txt", []byte("Hello, World!")}
+		testFile = fileToServe{"/helloworld", "helloworld.txt", []byte("Hello, World!")}
+		server   = NewFileServer()
 	)
 
 	t.Run("all requests should be 404'd if no endpoints have been registered", func(t *testing.T) {
-		path := fmt.Sprintf("/file/%s", strings.TrimSuffix(testFile.name, filepath.Ext(testFile.name)))
-		request := httptest.NewRequest(http.MethodGet, path, nil)
+		request := httptest.NewRequest(http.MethodGet, testFile.url, nil)
 		responseRecorder := httptest.NewRecorder()
 
-		FileDownloadHandler(responseRecorder, request)
+		server.FileDownloadHandler(responseRecorder, request)
 
 		resp := responseRecorder.Result()
 		AssertStatus404(t, resp)
 	})
 
-	t.Run("registering the server with a page name, byte data and a file name", func(t *testing.T) {
+	t.Run("registering an endpoint with content", func(t *testing.T) {
+		server.RegisterEndpoint(testFile.url, testFile.filename, testFile.content)
 
+		request := httptest.NewRequest(http.MethodGet, testFile.url, nil)
+		responseRecorder := httptest.NewRecorder()
+
+		server.FileDownloadHandler(responseRecorder, request)
+
+		resp := responseRecorder.Result()
+		AssertStatusOK(t, resp)
+		AssertFilenameEqual(t, resp, testFile.filename)
+
+		got := responseRecorder.Body.String()
+		want := string(testFile.content)
+		if got != want {
+			t.Errorf("expected body %s, got %s", want, got)
+		}
 	})
 
-	t.Run("registering the server with a page name and a file path", func(t *testing.T) {
-
-	})
 }
 
 type fileToServe struct {
-	name    string
-	content []byte
+	url, filename string
+	content       []byte
 }
 
 func AssertStatusOK(t *testing.T, resp *http.Response) {
@@ -58,6 +68,6 @@ func AssertFilenameEqual(t *testing.T, got *http.Response, want string) {
 	contentDisposition := got.Header.Get("Content-Disposition")
 	expectedFilename := fmt.Sprintf("attachment; filename=%s", want)
 	if contentDisposition != expectedFilename {
-		t.Errorf("expected filename %s, got %s", want, got)
+		t.Errorf("expected filename %s, got %s", want, contentDisposition)
 	}
 }
