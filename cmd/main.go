@@ -12,7 +12,7 @@ import (
 	"github.com/krbreyn/sendto"
 )
 
-//encode port information in url
+//look into generating a keypass by encoding ip/port/url into a string
 
 func main() {
 	stat, _ := os.Stdin.Stat()
@@ -29,20 +29,21 @@ func main() {
 				fmt.Println("must provide extension")
 				return
 			}
+			//TODO stdin input
 			return
 		}
 	}
 
 	if len(os.Args) == 1 {
-		fmt.Println("please route a file into stdin or type in your client keys")
+		fmt.Println("please use send, stdin, or type in your client keys")
 		return
 	}
 
 	if len(os.Args) == 3 && os.Args[1] == "send" {
 		fmt.Println("sending", os.Args[2])
 		if path.Ext(os.Args[2]) == "" {
-			fmt.Println("must provide extension")
-			return
+			fmt.Println("no extension provided")
+			//return
 		}
 
 		file, err := os.Open(os.Args[2])
@@ -64,8 +65,10 @@ func main() {
 		ip, _ := sendto.GetLocalIP()
 		fmt.Printf("serving at %s:%s/%s\n", ip, "8000", url)
 
-		server.StartServer(":8000")
-		//todo press enter to close and quit
+		go server.StartServer(":8000")
+		fmt.Printf("type sendto client %s %s %s on your client\n", strings.TrimPrefix(ip, "192.168."), "8000", url)
+		fmt.Println("press enter to quit")
+		_, _ = fmt.Scanln() // wait
 		return
 	}
 
@@ -80,6 +83,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		defer resp.Body.Close()
 
 		filename := resp.Header.Get("Content-Disposition")
 		filename = strings.TrimPrefix(filename, "attachment; filename=")
@@ -89,7 +93,7 @@ func main() {
 		}
 		fmt.Println(filename)
 
-		//todo prompt to actually accept download
+		//TODO prompt to actually accept download
 
 		out, err := os.Create(filename)
 		if err != nil {
@@ -97,6 +101,7 @@ func main() {
 		}
 		defer out.Close()
 
+		// TODO download progress with teereader
 		_, err = out.ReadFrom(resp.Body)
 		if err != nil {
 			panic(err)

@@ -32,12 +32,6 @@ func GetLocalIP() (string, error) {
 	return "", nil
 }
 
-// The IP must be a local ip in the format of '192.168.xx.xxx'. The port must be in the format of :xxxx.
-// The path must be in the format of /file/xxx.
-func ComposeURL(ip, port, path string) string {
-	return ip + port + path
-}
-
 // the file hosting server
 
 type FileServer struct {
