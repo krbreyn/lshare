@@ -9,8 +9,26 @@ import (
 	"path"
 	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/krbreyn/sendto"
 )
+
+type ProgressTracker struct {
+	Total uint64
+}
+
+func (pt *ProgressTracker) Write(p []byte) (int, error) {
+	n := len(p)
+	pt.Total += uint64(n)
+	pt.PrintProgress()
+	return n, nil
+}
+
+func (pt *ProgressTracker) PrintProgress() {
+	fmt.Printf("\r%s", strings.Repeat(" ", 35))
+
+	fmt.Printf("\rDownloading... %s", humanize.Bytes(pt.Total))
+}
 
 //look into generating a keypass by encoding ip/port/url into a string
 
@@ -30,13 +48,10 @@ func main() {
 				//return
 			}
 			data, err := io.ReadAll(os.Stdin)
-			if err != nil {
-				panic(err)
-			}
+			must(err)
 			server := sendto.NewFileServer()
 
-			url := strings.TrimSuffix(os.Args[2], path.Ext(os.Args[2]))
-
+			url := os.Args[2]
 			server.RegisterEndpoint(url, os.Args[2], data)
 
 			ip, _ := sendto.GetLocalIP()
@@ -64,19 +79,14 @@ func main() {
 		}
 
 		file, err := os.Open(os.Args[2])
-		if err != nil {
-			panic(err)
-		}
+		must(err)
 
 		data, err := io.ReadAll(file)
-		if err != nil {
-			panic(err)
-		}
+		must(err)
 
 		server := sendto.NewFileServer()
 
-		url := strings.TrimSuffix(os.Args[2], path.Ext(os.Args[2]))
-
+		url := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(os.Args[2], "(", ""), ")", ""), " ", "")
 		server.RegisterEndpoint(url, os.Args[2], data)
 
 		ip, _ := sendto.GetLocalIP()
@@ -95,11 +105,9 @@ func main() {
 		path := os.Args[4]
 
 		url := fmt.Sprintf("http://%s:%s/%s", ip, port, path)
-		//fmt.Println(url)
 		resp, err := http.Get(url)
-		if err != nil {
-			panic(err)
-		}
+		must(err)
+
 		defer resp.Body.Close()
 
 		filename := resp.Header.Get("Content-Disposition")
@@ -113,18 +121,23 @@ func main() {
 		//TODO prompt to actually accept download
 
 		out, err := os.Create(filename)
-		if err != nil {
-			panic(err)
-		}
+		must(err)
+
 		defer out.Close()
 
-		// TODO download progress with teereader
-		_, err = out.ReadFrom(resp.Body)
-		if err != nil {
-			panic(err)
-		}
+		tracker := &ProgressTracker{}
+		_, err = io.Copy(out, io.TeeReader(resp.Body, tracker))
+		must(err)
 
-		fmt.Println("saved", filename)
+		fmt.Println("\nsaved", filename)
+		return
 	}
 
+	fmt.Println("invalid inputs")
+}
+
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
