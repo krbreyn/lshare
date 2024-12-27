@@ -27,42 +27,33 @@ func TestFileServer(t *testing.T) {
 	t.Run("all requests should be 404'd if no endpoints have been registered", func(t *testing.T) {
 		server := NewFileServer()
 		request := httptest.NewRequest(http.MethodGet, testFile.url, nil)
-		responseRecorder := httptest.NewRecorder()
 
-		server.FileDownloadHandler(responseRecorder, request)
-
-		resp := responseRecorder.Result()
+		resp, _ := RecordResponse(t, request, server)
 		AssertStatus404(t, resp)
 	})
 
-	t.Run("registering an endpoint with content", func(t *testing.T) {
+	t.Run("registering an endpoint with content serves direct download", func(t *testing.T) {
 		server := NewFileServer()
 		server.RegisterEndpoint(testFile.url, testFile.filename, testFile.content)
 
 		request := httptest.NewRequest(http.MethodGet, testFile.url, nil)
-		responseRecorder := httptest.NewRecorder()
 
-		server.FileDownloadHandler(responseRecorder, request)
-		resp := responseRecorder.Result()
-		AssertFileServed(t, testFile, resp, responseRecorder.Body.String())
+		resp, body := RecordResponse(t, request, server)
+		AssertFileServed(t, testFile, resp, body)
 	})
 
-	t.Run("deleting an endpoint", func(t *testing.T) {
+	t.Run("deleting an endpoint returns 404 on further requests", func(t *testing.T) {
 		server := NewFileServer()
 		server.RegisterEndpoint(testFile.url, testFile.filename, testFile.content)
 
 		request := httptest.NewRequest(http.MethodGet, testFile.url, nil)
-		responseRecorder := httptest.NewRecorder()
 
-		server.FileDownloadHandler(responseRecorder, request)
-		resp := responseRecorder.Result()
-		AssertFileServed(t, testFile, resp, responseRecorder.Body.String())
+		resp, body := RecordResponse(t, request, server)
+		AssertFileServed(t, testFile, resp, body)
 
 		server.DeleteEndpoint(testFile.url)
 
-		responseRecorder = httptest.NewRecorder()
-		server.FileDownloadHandler(responseRecorder, request)
-		resp = responseRecorder.Result()
+		resp, _ = RecordResponse(t, request, server)
 		AssertStatus404(t, resp)
 	})
 }
@@ -70,6 +61,13 @@ func TestFileServer(t *testing.T) {
 type fileToServe struct {
 	url, filename string
 	content       []byte
+}
+
+func RecordResponse(t *testing.T, r *http.Request, s *FileServer) (*http.Response, string) {
+	responseRecorder := httptest.NewRecorder()
+	s.FileDownloadHandler(responseRecorder, r)
+	resp := responseRecorder.Result()
+	return resp, responseRecorder.Body.String()
 }
 
 func AssertFileServed(t *testing.T, file fileToServe, resp *http.Response, body string) {
