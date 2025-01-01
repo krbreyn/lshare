@@ -31,6 +31,7 @@ func (pt *ProgressTracker) PrintProgress() {
 }
 
 //look into generating a keypass by encoding ip/port/url into a string
+//do base64 encoding and have the option be set to a flag
 
 func main() {
 	stat, _ := os.Stdin.Stat()
