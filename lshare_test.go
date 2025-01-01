@@ -1,4 +1,4 @@
-package sendto
+package lshare
 
 import (
 	"fmt"

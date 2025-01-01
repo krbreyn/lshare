@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize"
-	"github.com/krbreyn/sendto"
+	"github.com/krbreyn/lshare"
 )
 
 type ProgressTracker struct {
@@ -50,12 +50,12 @@ func main() {
 			}
 			data, err := io.ReadAll(os.Stdin)
 			must(err)
-			server := sendto.NewFileServer()
+			server := lshare.NewFileServer()
 
 			url := os.Args[2]
 			server.RegisterEndpoint(url, os.Args[2], data)
 
-			ip, _ := sendto.GetLocalIP()
+			ip, _ := lshare.GetLocalIP()
 			fmt.Printf("serving at %s:%s/%s\n", ip, "8000", url)
 
 			go server.StartServer(":8000")
@@ -85,12 +85,12 @@ func main() {
 		data, err := io.ReadAll(file)
 		must(err)
 
-		server := sendto.NewFileServer()
+		server := lshare.NewFileServer()
 
 		url := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(os.Args[2], "(", ""), ")", ""), " ", "")
 		server.RegisterEndpoint(url, os.Args[2], data)
 
-		ip, _ := sendto.GetLocalIP()
+		ip, _ := lshare.GetLocalIP()
 		fmt.Printf("serving at %s:%s/%s\n", ip, "8000", url)
 
 		go server.StartServer(":8000")
