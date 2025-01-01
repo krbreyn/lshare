@@ -1,4 +1,4 @@
-module github.com/krbreyn/sendto
+module github.com/krbreyn/lshare
 
 go 1.23.4
 
