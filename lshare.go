@@ -29,7 +29,7 @@ func GetLocalIP() (string, error) {
 		}
 	}
 
-	return "", nil
+	return "", errors.New("could not find local ipv4 address")
 }
 
 // the file hosting server
